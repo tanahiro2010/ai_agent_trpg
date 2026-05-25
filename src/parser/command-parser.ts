@@ -5,6 +5,28 @@ import { validateWithSchema } from "../utils/validation.ts";
 
 const ACTION_BLOCK_REGEX = /\[action\]([\s\S]*?)\[\/action\]/i;
 
+const VALID_ACTION_TYPES = new Set(["skill_check", "speak", "move", "wait"]);
+
+function parseInlineActionLine(line: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  const trimmed = line.trim();
+  if (!trimmed) return result;
+
+  const [typeToken, ...restTokens] = trimmed.split(/\s+/);
+  if (!VALID_ACTION_TYPES.has(typeToken!)) return result;
+
+  result.type = typeToken!;
+  for (const token of restTokens) {
+    const separatorIndex = token.indexOf("=") >= 0 ? token.indexOf("=") : token.indexOf(":");
+    if (separatorIndex === -1) continue;
+    const key = token.slice(0, separatorIndex).trim();
+    const value = token.slice(separatorIndex + 1).trim();
+    if (key && value) result[key] = value;
+  }
+
+  return result;
+}
+
 export function extractActionBlock(text: string): string | null {
   const match = text.match(ACTION_BLOCK_REGEX);
   return match?.[1]?.trim() ?? null;
@@ -21,6 +43,32 @@ export function parseKeyValueBlock(block: string): Record<string, string> {
     const value = trimmed.slice(colonIndex + 1).trim();
     if (key) result[key] = value;
   }
+  return result;
+}
+
+function parseActionBlock(block: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  const lines = block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+  if (lines.length === 0) return result;
+
+  Object.assign(result, parseInlineActionLine(lines[0]!));
+
+  for (const line of lines) {
+    const colonIndex = line.indexOf(":");
+    const equalsIndex = line.indexOf("=");
+    const separatorIndex =
+      colonIndex === -1 ? equalsIndex : equalsIndex === -1 ? colonIndex : Math.min(colonIndex, equalsIndex);
+    if (separatorIndex === -1) continue;
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+    if (key && value) result[key] = value;
+  }
+
   return result;
 }
 
@@ -88,7 +136,7 @@ export function parseActionFromText(text: string): PlayerAction | null {
     return null;
   }
 
-  const record = repairActionRecord(parseKeyValueBlock(block));
+  const record = repairActionRecord(parseActionBlock(block));
   const payload = recordToActionPayload(record);
   if (!payload) {
     log("parser", "unknown action type", { record }, "warn");
