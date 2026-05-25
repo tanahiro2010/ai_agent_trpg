@@ -3,40 +3,34 @@ export type PlayerPromptContext = {
   location: string;
   phase: string;
   turn: number;
+  scenePageId: string;
+  sceneBranches: string;
   knownFacts: string[];
   lastGmNarration: string;
   conversationHistory?: string;
   npcsPresent?: string[];
+  combatHint?: string;
 };
 
 export function buildPlayerSystemPrompt(): string {
   return [
-    "あなたはクトゥルフ神話TRPGのプレイヤー（PL）キャラクターです。",
+    "あなたはTRPGのプレイヤー（PL）1人です。",
     "",
     "役割:",
-    "- キャラクターとして行動を1つ宣言する",
-    "- 調査・会話・移動・待機を状況に応じて選ぶ",
+    "- 自分のキャラクターとして行動を1つだけ宣言する",
     "",
-    "行動の選び方:",
-    "- NPCと話す場面では type: speak を優先する",
-    "- 調べる・探す場面では type: skill_check（skill: spot_hidden, listen, library_use 等）",
-    "- 移動するときは type: move",
-    "- 特にすることがなければ type: wait",
-    "",
-    "speak の例:",
-    "[action]",
-    "type: speak",
-    "target: 店主",
-    "message: この店について教えてください。",
-    "reason: 情報を集める",
-    "[/action]",
+    "行動タイプ:",
+    "- speak: 会話・交渉・宣言",
+    "- skill_check: 調査・回避・聞き耳など（skill: dodge, spot_hidden, listen, persuade 等）",
+    "- move: 場所移動・扉に入る（location に目的地）",
+    "- wait: 様子見",
     "",
     "禁止:",
     "- ダイス結果の決定",
-    "- HP/SANの変更",
-    "- 真相の確定",
+    "- 状態変更",
+    "- 地の文・説明文（[action] のみ）",
     "",
-    "必ず [action]...[/action] 形式のみ返すこと。説明文や地の文は書かない。",
+    "必ず [action]...[/action] のみ返すこと。",
   ].join("\n");
 }
 
@@ -44,17 +38,24 @@ export function buildPlayerUserPrompt(ctx: PlayerPromptContext): string {
   const parts = [
     `キャラクター: ${ctx.playerName}`,
     `ターン: ${ctx.turn}`,
-    `フェーズ: ${ctx.phase}`,
     `現在地: ${ctx.location}`,
+    `フェーズ: ${ctx.phase}`,
+    `現シーン: ${ctx.scenePageId}`,
   ];
 
   if (ctx.npcsPresent && ctx.npcsPresent.length > 0) {
-    parts.push("", "近くにいるNPC:", ...ctx.npcsPresent.map((n) => `- ${n}`));
+    parts.push("", "近くのNPC:", ...ctx.npcsPresent.map((n) => `- ${n}`));
+  }
+
+  parts.push("", "シナリオ上の選択肢（参考）:", ctx.sceneBranches);
+
+  if (ctx.combatHint) {
+    parts.push("", ctx.combatHint);
   }
 
   parts.push(
     "",
-    "既知の情報:",
+    "既知:",
     ...(ctx.knownFacts.length > 0
       ? ctx.knownFacts.map((f) => `- ${f}`)
       : ["- （特になし）"]),
@@ -66,16 +67,15 @@ export function buildPlayerUserPrompt(ctx: PlayerPromptContext): string {
 
   parts.push("", "直近のGM描写:", ctx.lastGmNarration);
 
-  if (ctx.phase === "dialog") {
+  if (ctx.phase === "combat") {
     parts.push(
       "",
-      "会話が続いています。NPCに話しかけるなら type: speak を使ってください。",
+      "戦闘中です。回避するなら skill_check（skill: dodge, target: 回避）を使うこと。",
     );
+  } else if (ctx.phase === "dialog") {
+    parts.push("", "会話・交渉には speak を使うこと。");
   } else {
-    parts.push(
-      "",
-      "状況を読み、調査・会話・移動のいずれか1つを [action] で宣言してください。",
-    );
+    parts.push("", "扉に入る・移動するなら move、調べるなら skill_check、話すなら speak。");
   }
 
   return parts.join("\n");

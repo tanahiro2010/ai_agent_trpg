@@ -2,7 +2,7 @@ import { runStoryReplay } from "./cli/story-replay.ts";
 import { loadProjectEnv } from "./config/env.ts";
 import { GameEngine } from "./engine/game-engine.ts";
 import { createCohereProviderFromEnvStrict } from "./llm/cohere-provider.ts";
-import { MockLLMProvider } from "./llm/mock-provider.ts";
+import { MockLLMProvider, TEST_SCENARIO_SCRIPT } from "./llm/mock-provider.ts";
 import type { LLMProvider } from "./llm/types.ts";
 import { loadScenarioTxt } from "./scenario/loader.ts";
 import {
@@ -71,9 +71,12 @@ Environment (.env):
   return { scenarioPath, useMock, maxTurns, includeRaw, storyLogPath };
 }
 
-function createLLMProvider(useMock: boolean): LLMProvider {
+function createLLMProvider(useMock: boolean, scenarioPath: string): LLMProvider {
   if (useMock) {
-    return new MockLLMProvider();
+    const isTestScenario = scenarioPath.includes("test.txt");
+    return new MockLLMProvider(
+      isTestScenario ? TEST_SCENARIO_SCRIPT : undefined,
+    );
   }
   return createCohereProviderFromEnvStrict();
 }
@@ -95,7 +98,7 @@ async function main(): Promise<void> {
   log("cli", "session initializing", { scenarioPath, useMock, maxTurns, includeRaw, logPath });
 
   const scenario = await loadScenarioTxt(scenarioPath);
-  const llm = createLLMProvider(useMock);
+  const llm = createLLMProvider(useMock, scenarioPath);
 
   logSessionStart(scenario.title, llm.name);
 

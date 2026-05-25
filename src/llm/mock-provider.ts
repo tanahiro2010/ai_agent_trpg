@@ -5,6 +5,47 @@ type MockScript = {
   pl: string[];
 };
 
+/** scenarios/test.txt 用（扉・少女シナリオ） */
+export const TEST_SCENARIO_SCRIPT: MockScript = {
+  gm: [
+    `いつも通りの日常の途中、突然、目の前にどこか異次元を思わせる扉が現れる。
+無機質な白と黒の幾何学模様が、不気味に揺れている。`,
+    `扉の向こうは真っ白な空間。一人の少女が武器を構え、キョロキョロと辺りを見回している。
+少女がこちらに気付くと、刀を向けてくる。
+
+「……誰？」`,
+    `少女は刀を鞘に収め、少しだけ肩の力を抜いた。
+
+「……そう、敵じゃないのね。ごめんなさい、早とちりだったわ。」
+
+「えぇと、貴方はどこから来たの？」`,
+    `少女は目を輝かせた。
+
+「本当！ありがとう、貴方は命の恩人よ……そこ通させてもらってもいいかしら？」
+
+あなたが頷くと、彼女は入ってきた扉へと歩いていく。`,
+  ],
+  pl: [
+    `[action]
+type: move
+location: 扉の中
+reason: 入る
+[/action]`,
+    `[action]
+type: speak
+target: 少女
+message: 私たちは敵じゃない。話を聞かせてほしい。
+reason: 友好的な対応
+[/action]`,
+    `[action]
+type: speak
+target: 少女
+message: いいよ、扉を通していい。行って。
+reason: いいと言えば
+[/action]`,
+  ],
+};
+
 const DEFAULT_SCRIPT: MockScript = {
   gm: [
     `雨音が窓を叩く。古書店「夜鶴堂」の扉を開くと、煤と古い紙の香りが鼻をつく。

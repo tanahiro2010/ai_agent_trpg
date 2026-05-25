@@ -11,17 +11,56 @@ export type GameState = {
   discoveredClues: string[];
   activeEvents: string[];
   location: string;
+  sceneId: string;
+  scenarioTitle: string;
+  visitedPages: string[];
 };
 
 export function createInitialGameState(): GameState {
   return {
     turn: 0,
     phase: "exploration",
-    players: [createDefaultPlayer("pl-1", "探偵・小林")],
+    players: [createDefaultPlayer("pl-1", "探索者")],
     npcs: [createNPC("npc-shopkeeper", "店主・佐藤", "夜鶴堂")],
     discoveredClues: [],
     activeEvents: [],
     location: "夜鶴堂",
+    sceneId: "default",
+    scenarioTitle: "未設定",
+    visitedPages: [],
+  };
+}
+
+export function applyPlayerSanLoss(
+  state: GameState,
+  playerId: string,
+  loss: number,
+): GameState {
+  return {
+    ...state,
+    players: state.players.map((p) =>
+      p.id === playerId ? { ...p, san: Math.max(0, p.san - loss) } : p,
+    ),
+  };
+}
+
+export function applySceneToState(
+  state: GameState,
+  sceneId: string,
+  meta: { location: string; phase: GamePhase; npcs: NPCState[] },
+): GameState {
+  const visited = state.visitedPages.includes(sceneId)
+    ? state.visitedPages
+    : [...state.visitedPages, sceneId];
+
+  return {
+    ...state,
+    sceneId,
+    location: meta.location,
+    phase: meta.phase,
+    npcs: meta.npcs.map((n) => ({ ...n })),
+    visitedPages: visited,
+    discoveredClues: [...state.discoveredClues, sceneId],
   };
 }
 

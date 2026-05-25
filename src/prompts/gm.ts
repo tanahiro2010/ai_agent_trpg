@@ -1,48 +1,57 @@
 export type GMPromptContext = {
-  scenarioExcerpt: string;
+  scenarioTitle: string;
+  scenePageId: string;
+  scenePageNumber: number;
+  sceneBody: string;
+  sceneBranches: string;
   location: string;
   phase: string;
   turn: number;
+  playerName: string;
   publicClues: string[];
   conversationHistory?: string;
   npcsPresent?: string[];
   lastPlayerAction?: string;
   lastDiceResult?: string;
+  sceneTransition?: string;
 };
 
 export function buildGMSystemPrompt(): string {
   return [
-    "あなたはクトゥルフ神話TRPG／テーブルトーク系シナリオのGM（ゲームマスター）です。",
+    "あなたはTRPGのGM（ゲームマスター）です。",
     "",
     "役割:",
-    "- 場面・雰囲気・五感の描写",
-    "- 登場NPCの台詞（「」で会話を書く）",
-    "- プレイヤーの会話（speak）への応答",
-    "- 判定結果に沿った結果描写",
+    "- 現在シーンの状況・NPCの台詞・雰囲気のみを描写する",
+    "- プレイヤーキャラクターのセリフや行動は絶対に書かない",
     "",
-    "会話の書き方:",
-    "- NPCが話す場面では必ずセリフを含める",
-    "- 例: 店主が静かに言った。「……ようこそ。夜道は危いですよ。」",
-    "- プレイヤーが話しかけた内容には、NPCが自然に返答する",
+    "会話:",
+    "- NPCの台詞のみ「」で書く",
+    "- プレイヤーが話した内容は繰り返さず、NPCの反応だけ書く",
     "",
-    "禁止:",
-    "- ダイス目・成功失敗の決定（[result]を唯一の真実とする）",
-    "- HP/SANの変更",
-    "- シナリオに無い重大な真相・犯人の確定",
-    "- 新規NPCの大量追加（既存NPCの反応は可）",
+    "厳守:",
+    "- シナリオ全文の先読み・ページ先取り禁止（渡された現シーンのみ）",
+    "- ダイス結果の決定禁止（[result]があるときのみ従う）",
+    "- HP/SAN変更・新規NPC大量追加禁止",
+    "- [T1 GM] などのメタ表記禁止",
+    "- 「探索者たち」ではなくプレイヤー名で二人称（あなた）",
     "",
-    "出力:",
-    "- 描写と会話のみ（200〜500字程度）",
-    "- [action]ブロックは出力しない",
+    "分量: 150〜400字。",
   ].join("\n");
 }
 
 export function buildGMUserPrompt(ctx: GMPromptContext): string {
   const parts = [
+    `シナリオ: ${ctx.scenarioTitle}`,
+    `現シーン: ${ctx.scenePageId}（${ctx.scenePageNumber}ページ）`,
     `ターン: ${ctx.turn}`,
     `フェーズ: ${ctx.phase}`,
     `現在地: ${ctx.location}`,
+    `プレイヤー: ${ctx.playerName}`,
   ];
+
+  if (ctx.sceneTransition) {
+    parts.push("", "【シーン遷移・TS確定】", ctx.sceneTransition);
+  }
 
   if (ctx.npcsPresent && ctx.npcsPresent.length > 0) {
     parts.push("", "場にいるNPC:", ...ctx.npcsPresent.map((n) => `- ${n}`));
@@ -50,38 +59,35 @@ export function buildGMUserPrompt(ctx: GMPromptContext): string {
 
   parts.push(
     "",
-    "シナリオ資料（描写の参考。秘匿を勝手に公開しないこと）:",
-    ctx.scenarioExcerpt,
+    "── 現シーンのシナリオ本文（この範囲だけを根拠にすること）──",
+    ctx.sceneBody,
+    "── ここまで ──",
+    "",
+    "分岐（TSが処理。GMは勝手にページを進めない）:",
+    ctx.sceneBranches,
   );
 
   if (ctx.conversationHistory) {
-    parts.push("", "これまでの会話・描写:", ctx.conversationHistory);
+    parts.push("", "直近のやりとり（参考）:", ctx.conversationHistory);
   }
 
   if (ctx.publicClues.length > 0) {
-    parts.push("", "発見済み手がかり:", ...ctx.publicClues.map((c) => `- ${c}`));
+    parts.push("", "到達済みシーン:", ...ctx.publicClues.map((c) => `- ${c}`));
   }
 
   if (ctx.lastPlayerAction) {
-    parts.push("", "直前のPL行動:", ctx.lastPlayerAction);
-    if (ctx.phase === "dialog") {
-      parts.push(
-        "※会話フェーズです。PLの発言に対し、NPCの返答（セリフ）を必ず含めて描写してください。",
-      );
-    }
+    parts.push("", "直前のPL行動（TS確定）:", ctx.lastPlayerAction);
+    parts.push("PLの台詞を代わりに書かず、NPC・世界の反応のみ描写すること。");
   }
 
   if (ctx.lastDiceResult) {
-    parts.push("", "判定結果（TS確定・この結果を変更しないこと）:", ctx.lastDiceResult);
-    parts.push(
-      "成功なら新情報・進展を描写。失敗なら曖昧・誤解・危険の兆候を描写。",
-    );
-  } else if (ctx.turn === 1 && !ctx.lastPlayerAction) {
-    parts.push("", "オープニング描写を書いてください。シナリオ冒頭の情景から始めてください。");
-  } else if (!ctx.lastDiceResult && ctx.lastPlayerAction) {
-    parts.push("", "PL行動への結果描写（会話ならNPCの返答を含める）を書いてください。");
-  } else {
-    parts.push("", "上記に基づき、次のGM描写を出力してください。");
+    parts.push("", "判定結果（TS確定）:", ctx.lastDiceResult);
+  }
+
+  if (ctx.turn === 1 && !ctx.lastPlayerAction) {
+    parts.push("", "オープニング: 上記シーン本文の冒頭状況から描写を始める。");
+  } else if (ctx.lastPlayerAction) {
+    parts.push("", "上記PL行動に対する結果描写（NPCの返答・情景の変化）。");
   }
 
   return parts.join("\n");

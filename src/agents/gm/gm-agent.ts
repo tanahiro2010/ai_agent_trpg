@@ -1,6 +1,7 @@
 import type { LLMProvider } from "../../llm/types.ts";
 import { buildGMSystemPrompt, buildGMUserPrompt, type GMPromptContext } from "../../prompts/gm.ts";
 import { log } from "../../utils/logger.ts";
+import { sanitizeGmNarration } from "../../utils/sanitize-narration.ts";
 import { withRetry } from "../../utils/retry.ts";
 
 export class GMAgent {
@@ -26,6 +27,6 @@ export class GMAgent {
     );
 
     log("ai-raw", "GM response", { raw: response.raw });
-    return response.text;
+    return sanitizeGmNarration(response.text);
   }
 }

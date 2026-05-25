@@ -25,6 +25,7 @@ export function createDefaultPlayer(
       library_use: 40,
       listen: 45,
       persuade: 55,
+      dodge: 55,
       ...skills,
     },
   };

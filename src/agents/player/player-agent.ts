@@ -17,6 +17,7 @@ export class PlayerAgent {
   async decideAction(ctx: PlayerPromptContext): Promise<PlayerAction> {
     const system = buildPlayerSystemPrompt();
     let user = buildPlayerUserPrompt(ctx);
+    const branchHint = ctx.sceneBranches;
 
     for (let attempt = 1; attempt <= MAX_PARSE_RETRIES; attempt++) {
       const response = await withRetry(
@@ -44,7 +45,8 @@ export class PlayerAgent {
       user = [
         buildPlayerUserPrompt(ctx),
         "",
-        "前回の出力は不正でした。必ず [action]...[/action] 形式で再出力してください。",
+        "前回の出力は不正でした。必ず [action]...[/action] 形式で再出力。",
+        `参考分岐:\n${branchHint}`,
       ].join("\n");
     }
 
