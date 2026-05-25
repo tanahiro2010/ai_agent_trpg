@@ -31,6 +31,7 @@ export function buildPlayerSystemPrompt(): string {
     "- 地の文・説明文（[action] のみ）",
     "",
     "必ず [action]...[/action] のみ返すこと。",
+    "- If choices include branchId, output the selected branchId as its own line.",
   ].join("\n");
 }
 

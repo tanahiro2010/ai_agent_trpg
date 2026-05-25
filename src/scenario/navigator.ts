@@ -28,6 +28,10 @@ export function resolveNextPageId(
     return null;
   }
 
+  if (action.branchId) {
+    return page.branches.find((b) => b.branchId === action.branchId)?.targetPageId ?? null;
+  }
+
   const text = actionText(action);
 
   if (action.type === "move" && page.id === "page-2") {
@@ -83,6 +87,6 @@ export function formatBranchesForPrompt(page: ScenarioPage): string {
     return "（このシーンに明示的分岐なし）";
   }
   return page.branches
-    .map((b) => `- ${b.label} → ${b.targetPageId}`)
+    .map((b) => `- branchId: ${b.branchId} | ${b.label} -> ${b.targetPageId}`)
     .join("\n");
 }
