@@ -1,3 +1,4 @@
+import { runStoryReplay } from "./cli/story-replay.ts";
 import { loadProjectEnv } from "./config/env.ts";
 import { GameEngine } from "./engine/game-engine.ts";
 import { createCohereProviderFromEnvStrict } from "./llm/cohere-provider.ts";
@@ -17,11 +18,13 @@ function parseArgs(argv: string[]): {
   useMock: boolean;
   maxTurns: number;
   includeRaw: boolean;
+  storyLogPath: string | null;
 } {
   let scenarioPath = "scenarios/sample.txt";
   let useMock = true;
   let maxTurns = 4;
   let includeRaw = false;
+  let storyLogPath: string | null = null;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -33,17 +36,23 @@ function parseArgs(argv: string[]): {
       useMock = false;
     } else if (arg === "--include-raw") {
       includeRaw = true;
+    } else if (arg === "--story" && argv[i + 1]) {
+      storyLogPath = argv[++i] ?? null;
     } else if (arg === "--turns" && argv[i + 1]) {
       maxTurns = Number.parseInt(argv[++i] ?? "4", 10);
     } else if (arg === "--help" || arg === "-h") {
       console.log(`Usage: bun run src/index.ts [options]
 
-Options:
+Play mode:
   --scenario <path>    Scenario txt path (default: scenarios/sample.txt)
   --mock               Use mock LLM (default)
   --cohere             Use Cohere API (requires COHERE_API_KEY in .env)
   --turns <n>          Max turns (default: 4)
   --include-raw        Also print raw AI / parser / API logs to console
+
+Story replay (no API, read log only):
+  --story <log.jsonl>  Render session as player-friendly narrative
+
   -h, --help           Show help
 
 Logging:
@@ -59,7 +68,7 @@ Environment (.env):
     }
   }
 
-  return { scenarioPath, useMock, maxTurns, includeRaw };
+  return { scenarioPath, useMock, maxTurns, includeRaw, storyLogPath };
 }
 
 function createLLMProvider(useMock: boolean): LLMProvider {
@@ -70,11 +79,16 @@ function createLLMProvider(useMock: boolean): LLMProvider {
 }
 
 async function main(): Promise<void> {
-  await loadProjectEnv();
-
-  const { scenarioPath, useMock, maxTurns, includeRaw } = parseArgs(
+  const { scenarioPath, useMock, maxTurns, includeRaw, storyLogPath } = parseArgs(
     process.argv.slice(2),
   );
+
+  if (storyLogPath) {
+    await runStoryReplay(storyLogPath);
+    return;
+  }
+
+  await loadProjectEnv();
 
   const logPath = await initLogger({ includeRawConsole: includeRaw });
 
