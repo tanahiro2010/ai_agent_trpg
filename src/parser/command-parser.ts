@@ -43,11 +43,14 @@ function recordToActionPayload(
 ): Record<string, string> | null {
   const type = record.type;
   if (!type) return null;
+  const branchSelection: Record<string, string> = {};
+  if (record.branchId) branchSelection.branchId = record.branchId;
 
   switch (type) {
     case "skill_check":
       return {
         type,
+        ...branchSelection,
         skill: record.skill ?? "spot_hidden",
         target: record.target ?? "unknown",
         reason: record.reason ?? "調査する",
@@ -55,6 +58,7 @@ function recordToActionPayload(
     case "speak":
       return {
         type,
+        ...branchSelection,
         target: record.target ?? "npc",
         message: record.message ?? record.reason ?? "...",
         reason: record.reason ?? "会話する",
@@ -62,12 +66,14 @@ function recordToActionPayload(
     case "move":
       return {
         type,
+        ...branchSelection,
         location: record.location ?? record.target ?? "unknown",
         reason: record.reason ?? "移動する",
       };
     case "wait":
       return {
         type,
+        ...branchSelection,
         reason: record.reason ?? "様子を見る",
       };
     default:

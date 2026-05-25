@@ -1,6 +1,7 @@
 import type { RawScenario } from "../types/scenario.ts";
 
 export type ScenarioBranch = {
+  branchId: string;
   label: string;
   targetPageId: string;
   keywords: string[];
@@ -70,7 +71,7 @@ function keywordsFromLabel(label: string): string[] {
   return [...new Set([...base, ...extras])];
 }
 
-function parseBranches(body: string): ScenarioBranch[] {
+function parseBranches(body: string, pageId: string): ScenarioBranch[] {
   const lines = body.split("\n");
   const branches: ScenarioBranch[] = [];
 
@@ -99,6 +100,7 @@ function parseBranches(body: string): ScenarioBranch[] {
     if (exists) continue;
 
     branches.push({
+      branchId: `${pageId}-to-${targetPageId}`,
       label,
       targetPageId,
       keywords: keywordsFromLabel(label),
@@ -129,7 +131,7 @@ export function parseScenarioPages(scenario: RawScenario): ParsedScenarioPages {
       id,
       number: num,
       body,
-      branches: parseBranches(body),
+      branches: parseBranches(body, id),
       kind: classifyPage(body),
     });
   }
