@@ -53,20 +53,24 @@ function parseActionBlock(block: string): Record<string, string> {
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("#"));
 
-  if (lines.length === 0) return result;
-
-  Object.assign(result, parseInlineActionLine(lines[0]!));
-
   for (const line of lines) {
     const colonIndex = line.indexOf(":");
     const equalsIndex = line.indexOf("=");
-    const separatorIndex =
-      colonIndex === -1 ? equalsIndex : equalsIndex === -1 ? colonIndex : Math.min(colonIndex, equalsIndex);
-    if (separatorIndex === -1) continue;
 
-    const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim();
-    if (key && value) result[key] = value;
+    if (colonIndex !== -1) {
+      // key: value 形式
+      const key = line.slice(0, colonIndex).trim();
+      const value = line.slice(colonIndex + 1).trim();
+      if (key && value) result[key] = value;
+    } else if (equalsIndex !== -1) {
+      // key=value 形式（インライン）
+      const key = line.slice(0, equalsIndex).trim();
+      const value = line.slice(equalsIndex + 1).trim();
+      if (key && value) result[key] = value;
+    } else if (VALID_ACTION_TYPES.has(line)) {
+      // 単独のtype行（move, speak, wait, skill_check）
+      result.type = line;
+    }
   }
 
   return result;
